@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>เกมเรียงศัพท์กับครูปาย</title>
+  <style>
+    body { font-family: 'sans-serif'; background: #fff8f0; margin: 0; padding: 0; text-align: center; }
+    h1, h2 { color: #ff5e78; }
+    .container { padding: 20px; }
+    button { background: #ff5e78; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 10px; margin: 10px; cursor: pointer; }
+    .letter-btn { font-size: 28px; color: black; margin: 5px; padding: 10px 15px; border-radius: 8px; background: #ffd1dc; border: 1px solid #ff5e78; cursor: pointer; }
+    .letter-btn:hover { background: #ffb6c1; }
+    .hidden { display: none; }
+    .box { margin: 20px auto; font-size: 24px; }
+    .meaning-btn { color: black; margin: 5px; padding: 10px 15px; background: #d1e7ff; border: 1px solid #3399ff; border-radius: 8px; cursor: pointer; }
+    .meaning-btn:hover { background: #a6d4ff; }
+    #score { font-size: 24px; color: green; margin: 20px; }
+    input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container" id="start-screen">
+    <h1>🧠 เกมเรียงศัพท์กับครูปาย</h1>
+    <p>กรอกชื่อเล่นของคุณเพื่อเริ่ม</p>
+    <input type="text" id="playerName" placeholder="ชื่อเล่นของคุณ">
+    <br>
+    <button onclick="startGame()">เริ่มเกมเลย!</button>
+  </div>
+
+  <div class="container hidden" id="game-screen">
+    <h2 id="welcome"></h2>
+    <div id="question-box">
+      <div id="scrambled-word" style="font-size: 28px; margin-bottom: 10px;"></div>
+      <div id="letters"></div>
+      <div class="box" id="answer-box"></div><button onclick="undoLetter()">ลบตัวสุดท้าย</button>
+      <button onclick="submitWord()">ตรวจคำ</button>
+    </div>
+    <div id="meaning-box" class="hidden">
+      <p>เลือกความหมายของคำนี้:</p>
+      <div id="meanings"></div>
+    </div>
+  </div>
+
+  <div class="container hidden" id="result-screen">
+    <h2>สรุปคะแนนของ <span id="finalName"></span></h2>
+    <div id="score"></div>
+    <button onclick="location.reload()">🔙 กลับไปหน้าแรก</button>
+  </div>
+
+  <script>
+    const words = [{"word": "bench", "meanings": ["ม้านั่ง", "กระเป๋า", "หนังสือ"]}, {"word": "radio", "meanings": ["วิทยุ", "รถยนต์", "นาฬิกา"]}, {"word": "page", "meanings": ["หน้าในหนังสือ", "สวน", "ช้อน"]}, {"word": "fly", "meanings": ["แมลงวัน", "กบ", "ปลา"]}, {"word": "university", "meanings": ["มหาวิทยาลัย", "ห้องเรียน", "โรงพยาบาล"]}, {"word": "horse", "meanings": ["ม้า", "วัว", "นก"]}, {"word": "mouse", "meanings": ["หนู", "โทรศัพท์", "ปากกา"]}, {"word": "piano", "meanings": ["เปียโน", "รถเข็น", "วิทยุ"]}, {"word": "potato", "meanings": ["มันฝรั่ง", "ข้าวโพด", "มะเขือเทศ"]}, {"word": "wife", "meanings": ["ภรรยา", "พี่สาว", "คุณแม่"]}, {"word": "handkerchief", "meanings": ["ผ้าเช็ดหน้า", "ถุงมือ", "ผ้าเช็ดจาน"]}, {"word": "child", "meanings": ["เด็ก", "ผู้ใหญ่", "ครู"]}, {"word": "dress", "meanings": ["ชุดกระโปรง", "รองเท้าผ้าใบ", "กางเกง"]}, {"word": "story", "meanings": ["เรื่องราว", "เพลง", "ภาพ"]}, {"word": "glass", "meanings": ["แก้ว", "ขวด", "เหยือก"]}, {"word": "mango", "meanings": ["มะม่วง", "กล้วย", "ส้ม"]}, {"word": "company", "meanings": ["บริษัท", "ครอบครัว", "ร้านค้า"]}, {"word": "boss", "meanings": ["หัวหน้า", "พนักงาน", "เพื่อน"]}, {"word": "dish", "meanings": ["จาน", "หม้อ", "ช้อน"]}, {"word": "sheep", "meanings": ["แกะ", "หมู", "วัว"]}, {"word": "tooth", "meanings": ["ฟัน", "นิ้ว", "หู"]}, {"word": "goose", "meanings": ["ห่าน", "ไก่", "เป็ด"]}, {"word": "foot", "meanings": ["เท้า", "มือ", "เข่า"]}, {"word": "wish", "meanings": ["ความปรารถนา", "ปลา", "ความโกรธ"]}, {"word": "church", "meanings": ["โบสถ์", "โรงเรียน", "โรงพยาบาล"]}, {"word": "watch", "meanings": ["นาฬิกาข้อมือ", "หนังสือ", "กล้อง"]}, {"word": "fox", "meanings": ["หมาจิ้งจอก", "กระต่าย", "นกฮูก"]}, {"word": "knife", "meanings": ["มีด", "ช้อน", "ตะเกียบ"]}, {"word": "deer", "meanings": ["กวาง", "ม้า", "วัว"]}, {"word": "puppy", "meanings": ["ลูกสุนัข", "ลูกแมว", "ลูกนก"]}];
+
+    let current = 0;
+    let score = 0;
+    let answer = "";
+    let usedButtons = [];
+    let player = "";
+
+    function startGame() {
+      player = document.getElementById("playerName").value.trim();
+      if (!player) return alert("กรุณากรอกชื่อก่อนเริ่มเกม");
+      document.getElementById("start-screen").classList.add("hidden");
+      document.getElementById("game-screen").classList.remove("hidden");
+      document.getElementById("welcome").textContent = "สวัสดี " + player + " ข้อที่ 1 จาก 30";
+      showQuestion();
+    }
+
+    function shuffleWord(word) {
+      const arr = word.toLowerCase().split("");
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function showQuestion() {
+      const word = words[current].word.toLowerCase();
+      const shuffled = shuffleWord(word);
+      answer = "";
+      document.getElementById("scrambled-word").textContent = "🔤 เรียงคำ: " + shuffled.join(" ");
+      document.getElementById("letters").innerHTML = "";
+      document.getElementById("answer-box").textContent = "";
+      document.getElementById("meaning-box").classList.add("hidden");
+
+      shuffled.forEach((ch) => {
+        const btn = document.createElement("button");
+        btn.textContent = ch;
+        btn.className = "letter-btn";
+        btn.onclick = () => {
+          usedButtons.push(btn);
+          answer += ch;
+          document.getElementById("answer-box").textContent = answer;
+          btn.disabled = true;
+        };
+        document.getElementById("letters").appendChild(btn);
+      });
+    }
+
+    function undoLetter() {
+      if (answer.length > 0 && usedButtons.length > 0) {
+        answer = answer.slice(0, -1);
+        document.getElementById("answer-box").textContent = answer;
+        const lastBtn = usedButtons.pop();
+        lastBtn.disabled = false;
+      }
+    }
+
+    function submitWord() {
+      const correct = words[current].word.toLowerCase();
+      if (answer === correct) {
+        showMeanings();
+      } else {
+        alert("❌ ยังไม่ถูกนะ ลองเรียงใหม่อีกครั้ง!");
+      }
+    }
+
+    function showMeanings() {
+      document.getElementById("meaning-box").classList.remove("hidden");
+      const meanings = [...words[current].meanings];
+      const correct = meanings[0];
+      const shuffled = meanings.sort(() => Math.random() - 0.5);
+      document.getElementById("meanings").innerHTML = "";
+      shuffled.forEach(m => {
+        const btn = document.createElement("button");
+        btn.textContent = m;
+        btn.className = "meaning-btn";
+        btn.onclick = () => {
+          usedButtons.push(btn);
+          if (m === correct) {
+            score++;
+            alert("✅ ถูกต้อง!");
+          } else {
+            alert("❌ ความหมายผิดนะ");
+          }
+          nextQuestion();
+        };
+        document.getElementById("meanings").appendChild(btn);
+      });
+    }
+
+    function nextQuestion() {
+      current++;
+      if (current >= words.length) {
+        document.getElementById("game-screen").classList.add("hidden");
+        document.getElementById("result-screen").classList.remove("hidden");
+        document.getElementById("finalName").textContent = player;
+        document.getElementById("score").textContent = "คุณได้ " + score + " / " + words.length + " คะแนน";
+      } else {
+        document.getElementById("welcome").textContent = "สวัสดี " + player + " ข้อที่ " + (current+1) + " จาก 30";
+        showQuestion();
+      }
+    }
+  </script>
+</body>
+</html>
